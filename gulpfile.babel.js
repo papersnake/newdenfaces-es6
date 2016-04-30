@@ -16,7 +16,7 @@ import browserify from 'browserify';
 import watchify from 'watchify';
 import uglify from 'gulp-uglify';
 
-let production = process.env.NODE_ENV === 'production';
+const production = process.env.NODE_ENV === 'production';
 
 const dependencies = [
 	'alt',
@@ -64,7 +64,7 @@ gulp.task('browserify-vendor', () =>
 gulp.task('browserify', ['browserify-vendor'], () =>
   browserify('app/main.js')
     .external(dependencies)
-    .transform(babelify,{ presets: ["es2015", "react"]})
+    .transform(babelify,{ presets: ["es2015", "react"]}) //注意这里，只有加上presets配置才能正常编译
     .bundle()
     .pipe(source('bundle.js'))
     .pipe(gulpif(production, streamify(uglify({ mangle: false }))))

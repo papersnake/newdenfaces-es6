@@ -2,7 +2,7 @@ import React from 'react';
 import {Link} from 'react-router';
 import HomeStore from '../stores/HomeStore';
 import HomeActions from '../actions/HomeActions';
-import {first, without, findWhere} from 'lodash';
+import {first, without, filter} from 'lodash';
 
 class Home extends React.Component {
 
@@ -26,14 +26,15 @@ class Home extends React.Component {
 	}
 
 	handleClick(character){
-		var winner = character.characterId;
-		var loser = first(without(this.state.characters, findwhere(this.state.characters, { characterId: winner}))).characterId;
-		HomeActions.vote(winner, loser);
+		let winner = character.characterId;
+		//let loser = first(without(this.state.characters, filter(this.state.characters, { characterId: winner}))).characterId;
+		let loser = first(filter(this.state.characters,item => item.characterId != winner )).characterId;
+    HomeActions.vote(winner, loser);
 
 	}
 
   	render() {
-  		var characterNodes = this.state.characters.map((character,index) => {
+  		const characterNodes = this.state.characters.map((character,index) => {
   			return(
   				<div key={character.characterId} className={index ===0 ? 'col-xs-6 col-sm-6 col-md-5 col-md-offset-1' : 'col-xs-6 col-sm-6 col-md-5'}>
   					<div className='thumbnail fadeInUp animated'>

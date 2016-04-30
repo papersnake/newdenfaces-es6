@@ -31,20 +31,97 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(favicon(path.join(__dirname,'public','favicon.png')));
 app.use(express.static(path.join(__dirname,'public')));
 
+app.put('/api/characters/', (req, res, next) => {
+	let winner = req.body.winner;
+	let loser = req.body.loser;
+
+	console.log('winner: ' + winner + '\n');
+	console.log('loser: ' + loser +'\n');
+	if(!winner || !loser) {
+		return res.status(400).send({ message: 'Voting requires two characters.'});
+	}
+
+	if(winner === loser) {
+		return res.status(400).send({ message: 'Cannot vote for and against the same characters'});
+	}
+
+	async.parallel([
+		callback => {
+			app.models.character.findOne({ characterId: winner }, (err, winner) => {
+				callback(err,winner);
+			});
+		},
+		callback => {
+			app.models.character.findOne({ characterId: loser}, (err, winner) => {
+				callback(err,winner);
+			});
+		}		
+	],
+	(err, results) => {
+		if(err) return next(err);
+
+		let winner = results[0];
+		let loser = results[1];
+
+		if(!winner || !loser) {
+			return res.status(404).send({ message: 'One of the characters no longer exists.'});
+		}
+
+		if(winner.voted || loser.voted){
+			return res.status(200).end();
+		}
+
+		async.parallel([
+			callback => {
+				winner.wins++;
+				winner.voted = true
+				winner.save(err => {
+					callback(err);
+				});
+			},
+			callback => {
+				loser.losses++;
+				loser.voted = true;
+				loser.save(err => {
+					callback(err);
+				});
+			}
+		],err => {
+			if(err) return next(err);
+			res.status(200).end();
+		});
+	});
+});
+
 
 app.get('/api/characters', (req,res,next) => {
 	let choice = ['Female', 'Male'];
 	let randomGender = _.sample(choice);
-	//res.send([]);
+	//原文中是通过nearby字段来实现随机取值，waterline没有实现mysql order by rand(),所以返回所有结果，用lodash来处理
 	app.models.character.find()
 		.where({'voted': false})
-		.where({'gender': randomGender})
 		.exec((err,characters) => {
 			if(err) return next(err);
-			//console.log(characters);
-			let randomCharacters = _.sampleSize(characters,2); 
-			//console.log(randomCharacters);
-			return res.send(randomCharacters);
+			//当返回的结果大于2的时候，直接返回结果
+			if(characters.length >=2){
+				//用lodash来取两个随机值
+				let randomCharacters = _.sampleSize(_.filter(characters,{'gender': randomGender}),2); 
+				//console.log(randomCharacters);
+				return res.send(randomCharacters);
+			}
+
+			//换个性别再试试
+			let oppsiteGender = _.first(_.without(choice, randomGender));
+			let oppsiteCharacters = _.sampleSize(_.filter(characters,{'gender': oppsiteGender}),2); 
+
+			if(oppsiteCharacters === 2) {
+				return res.send(oppsiteCharacters);
+			}
+
+			//更新所有角色这步先不做了
+			return res.send([]);
+
+
 		});
 
 });
@@ -62,7 +139,7 @@ app.post('/api/characters',(req,res,next) => {
 				if(err) return next(err);
 				parser.parseString(xml,(err,parsedXml) => {
 					try {
-						var characterId = parsedXml.eveapi.result[0].rowset[0].row[0].$.characterID;
+						let characterId = parsedXml.eveapi.result[0].rowset[0].row[0].$.characterID;
 
 						app.models.character.findOne({ characterId: characterId},(err,model) => {
 							if(err) return next(err);
@@ -87,9 +164,9 @@ app.post('/api/characters',(req,res,next) => {
 				parser.parseString(xml, (err,parsedXml) => {
 					if (err) return res.send(err);
 					try{
-						var name = parsedXml.eveapi.result[0].characterName[0];
-						var race = parsedXml.eveapi.result[0].race[0];
-						var bloodline = parsedXml.eveapi.result[0].bloodline[0];
+						let name = parsedXml.eveapi.result[0].characterName[0];
+						let race = parsedXml.eveapi.result[0].race[0];
+						let bloodline = parsedXml.eveapi.result[0].bloodline[0];
 						app.models.character.create({
 							characterId: characterId,
 							name: name,
