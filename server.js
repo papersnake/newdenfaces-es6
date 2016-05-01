@@ -31,6 +31,51 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(favicon(path.join(__dirname,'public','favicon.png')));
 app.use(express.static(path.join(__dirname,'public')));
 
+app.get('/api/characters/top',(req,res,next) => {
+	var params = req.query;
+	var conditions = {};
+
+	_.each(params,(value,key) => {
+		//conditions[key] =new RegExp('')
+	});
+});
+
+
+
+app.get('/api/characters/search', (req,res,next) => {
+	console.log(req.query.name);
+	app.models.character.findOne({name:{'contains':req.query.name}}, (err,character) => {
+		if(err) return next(err);
+
+		if(!character) {
+			return res.status(404).send({ message: 'Character not found.'});
+		}
+
+		return res.send(character);
+	});
+});
+
+app.get('/api/characters/count', (req,res,next) => {
+	app.models.character.count({},(err, count) => {
+		if(err) return next(err);
+		res.send({ count: count });
+	});
+});
+
+app.get('/api/characters/:id', (req,res,next) => {
+	var id = req.params.id;
+
+	app.models.character.findOne({characterId: id}, (err,character) => {
+		if(err) return next(err);
+
+		if(!character){
+			return res.status(404).send({ message: 'character not found'});
+		}
+
+		res.send(character);
+	});
+});
+
 app.put('/api/characters/', (req, res, next) => {
 	let winner = req.body.winner;
 	let loser = req.body.loser;
@@ -213,7 +258,7 @@ io.sockets.on('connection', (socket) => {
 
 
 
-orm.initialize(Config,function(err,models){
+orm.initialize(Config, (err,models) => {
 	if(err) throw err;
 	app.models = models.collections;
 	//app.set('models',models.collections);
