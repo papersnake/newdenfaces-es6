@@ -147,11 +147,11 @@ app.get('/api/characters', (req,res,next) => {
 		.where({'voted': false})
 		.exec((err,characters) => {
 			if(err) return next(err);
-			//当返回的结果大于2的时候，直接返回结果
-			if(characters.length >=2){
-				//用lodash来取两个随机值
-				let randomCharacters = _.sampleSize(_.filter(characters,{'gender': randomGender}),2); 
-				//console.log(randomCharacters);
+			
+			//用lodash来取两个随机值
+			let randomCharacters = _.sampleSize(_.filter(characters,{'gender': randomGender}),2); 
+			if(randomCharacters.length === 2){
+			//console.log(randomCharacters);
 				return res.send(randomCharacters);
 			}
 
@@ -163,8 +163,11 @@ app.get('/api/characters', (req,res,next) => {
 				return res.send(oppsiteCharacters);
 			}
 
-			//更新所有角色这步先不做了
-			return res.send([]);
+			app.models.character.update({},{'voted': false}).exec((err,characters) => {
+				if(err) return next(err);
+				return res.send([]);
+			});
+			
 
 
 		});

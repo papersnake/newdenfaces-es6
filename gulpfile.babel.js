@@ -22,7 +22,7 @@ const dependencies = [
 	'alt',
 	'react',
 	'react-router',
-	'underscore'
+	'lodash'
 ];
 
 /*

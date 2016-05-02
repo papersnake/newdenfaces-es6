@@ -2,6 +2,10 @@
   "name": "newdenfaces",
   "version": "1.0.0",
   "description": "Character voting app for EVE Online",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/papersnake/newdenfaces-es6"
+  },
   "main": "server.js",
   "scripts": {
     "watch": "nodemon --exec babel-node -- server.js",

@@ -1,5 +1,5 @@
 import alt from '../alt';
-import {assign} from 'underscore';
+import {assign} from 'lodash';
 
 class NavbarActions {
 	constructor() {
