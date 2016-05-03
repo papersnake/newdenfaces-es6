@@ -8,9 +8,7 @@ class FooterStore {
 	}
 
 	onGetTopCharactersSuccess(data) {
-		if(typeof data =="object" && dara.construcotr == Array){
-			this.characters = data.slice(0,5);
-		}
+		this.characters = data.slice(0,5);
 	}
 
 	onGetTopCharactersFail(jqXhr) {

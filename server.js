@@ -31,19 +31,65 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(favicon(path.join(__dirname,'public','favicon.png')));
 app.use(express.static(path.join(__dirname,'public')));
 
+app.post('/api/report', (req,res,next) => {
+	var characterId = req.body.characterId;
+
+	app.models.character.findOne({characterId: characterId}, (err,character) => {
+		if(err) return next(err);
+
+		if(!character) {
+			return res.status(404).send({ message: 'Character not found'});
+		}
+
+		character.reports++;
+
+		if(character.reports > 4){
+			character.remove();
+			return res.send({ message: character.name + ' has been deleted.'});
+		}
+
+		character.save(err => {
+			if(err) return next(err);
+			res.send({ message: character.name + ' has been reported.'})
+		});
+
+	});
+});
+
+app.get('/api/characters/shame',(req,res,next) => {
+	app.models.character.find()
+						.sort('losses desc')
+						.limit(100)
+						.exec((err,characters) =>{
+							if(err) return next(err);
+							res.send(characters);
+						});
+});
+
 app.get('/api/characters/top',(req,res,next) => {
 	var params = req.query;
-	var conditions = {};
+	console.log(params);
+	//next();
+	app.models.character.find(params)
+						.sort('wins desc')
+						.limit(100)
+						.exec((err,characters) => {
+							if(err) return next(err);
 
-	_.each(params,(value,key) => {
-		//conditions[key] =new RegExp('')
-	});
+							characters.sort(function(a, b) {
+						    	if (a.wins / (a.wins + a.losses) < b.wins / (b.wins + b.losses)) { return 1; }
+						    	if (a.wins / (a.wins + a.losses) > b.wins / (b.wins + b.losses)) { return -1; }
+						        return 0;
+						      });
+
+							res.send(characters);
+						});
+
 });
 
 
 
 app.get('/api/characters/search', (req,res,next) => {
-	console.log(req.query.name);
 	app.models.character.findOne({name:{'contains':req.query.name}}, (err,character) => {
 		if(err) return next(err);
 

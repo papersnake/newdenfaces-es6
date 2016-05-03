@@ -3,6 +3,7 @@ import {RouteHandler} from 'react-router';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
+
 class App extends React.Component {
   render() {
     return (
@@ -16,4 +17,14 @@ class App extends React.Component {
 }
 
 
+/*
+class App extends React.Component {
+	render(){
+		<div>
+			<Navbar />
+			{this.props.childern}
+			<Footer />
+		</div>
+	}
+}*/
 export default App;
