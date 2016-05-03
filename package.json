@@ -23,7 +23,6 @@
     "lodash": "^4.11.1",
     "morgan": "^1.6.1",
     "react": "^0.13.3",
-    "react-dom": "^15.0.2",
     "react-router": "^0.13.3",
     "request": "^2.58.0",
     "sails-mysql": "^0.12.1",
