@@ -31,6 +31,91 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(favicon(path.join(__dirname,'public','favicon.png')));
 app.use(express.static(path.join(__dirname,'public')));
 
+
+app.get('/api/stats', (req,res,next) => {
+	let asyncTask = [];
+	let countColumn = [
+				{},
+				{race: 'Amarr'},
+				{race: 'Caldari'},
+				{race: 'Gallente'},
+				{race: 'Minmatar'},
+				{gender: 'Male'},
+				{gender: 'Female'}
+			];
+	countColumn.forEach(column => {
+		asyncTask.push( callback => {
+			app.models.character.count(column,(err,count) => {
+				callback(err,count);
+			});
+		})
+	});
+
+	asyncTask.push(callback =>{
+		app.models.character.find()
+							.sum('wins')
+							.then(results => {
+								callback(null,results[0].wins);
+							});
+	} );
+
+	asyncTask.push(callback => {
+		app.models.character.find()
+							.sort('wins desc')
+							.limit(100)
+							.select('race')
+							.exec((err,characters) => {
+								if(err) return next(err);
+
+								let raceCount = _.countBy(characters,character => character.race);
+								console.log(raceCount);
+								let max = _.max(_.values(raceCount));
+								console.log(max);
+								let inverted = _.invert(raceCount);
+								let topRace = inverted[max];
+								let topCount = raceCount[topRace];
+
+								
+
+								callback(err,{race: topRace, count: topCount});
+							});
+	});
+
+	asyncTask.push(callback => {
+		app.models.character.find()
+							.sort('wins desc')
+							.limit(100)
+							.select('bloodline')
+							.exec((err,characters) => {
+								if(err) return next(err);
+
+								let bloodlineCount = _.countBy(characters,character => character.bloodline);
+								let max = _.max(_.values(bloodlineCount));
+								let inverted = _.invert(bloodlineCount);
+								let topBloodline = inverted[max];
+								let topCount = bloodlineCount[topBloodline];
+
+								callback(err,{bloodline: topBloodline, count: topCount});
+							});
+	});
+
+	async.parallel(asyncTask,(err,results) => {
+		if(err) return next(err);
+		res.send({
+			totalCount: results[0],
+	        amarrCount: results[1],
+	        caldariCount: results[2],
+	        gallenteCount: results[3],
+	        minmatarCount: results[4],
+	        maleCount: results[5],
+	        femaleCount: results[6],
+	        totalVotes: results[7],
+	        leadingRace: results[8],
+	        leadingBloodline:results[9]
+		});
+	}) 
+});
+
 app.post('/api/report', (req,res,next) => {
 	var characterId = req.body.characterId;
 
