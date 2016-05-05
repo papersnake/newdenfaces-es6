@@ -4,17 +4,19 @@
 import gulp from 'gulp';
 import gutil from 'gulp-util';
 import gulpif from 'gulp-if';
-import streamify from 'gulp-streamify';
+//import streamify from 'gulp-streamify';
 import autoprefixer from 'gulp-autoprefixer';
 import cssmin from 'gulp-cssmin';
 import less from 'gulp-less';
 import concat from 'gulp-concat';
 import plumber from 'gulp-plumber';
+import buffer from 'vinyl-buffer';
 import source from 'vinyl-source-stream';
 import babelify from 'babelify';
 import browserify from 'browserify';
 import watchify from 'watchify';
 import uglify from 'gulp-uglify';
+import sourcemaps from 'gulp-sourcemaps'
 
 const production = process.env.NODE_ENV === 'production';
 
@@ -52,7 +54,8 @@ gulp.task('browserify-vendor', () =>
     .require(dependencies)
     .bundle()
     .pipe(source('vendor.bundle.js'))
-    .pipe(gulpif(production, streamify(uglify({ mangle: false }))))
+    .pipe(buffer())
+    .pipe(gulpif(production, uglify({ mangle: false })))
     .pipe(gulp.dest('public/js'))
 );
 
@@ -67,7 +70,10 @@ gulp.task('browserify', ['browserify-vendor'], () =>
     .transform(babelify,{ presets: ["es2015", "react"]}) //注意这里，只有加上presets配置才能正常编译
     .bundle()
     .pipe(source('bundle.js'))
-    .pipe(gulpif(production, streamify(uglify({ mangle: false }))))
+    .pipe(buffer())
+    .pipe(sourcemaps.init({ loadMaps:true }))
+    .pipe(gulpif(production, uglify({ mangle: false })))
+    .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest('public/js'))
 );
 
@@ -77,7 +83,7 @@ gulp.task('browserify', ['browserify-vendor'], () =>
  |--------------------------------------------------------------------------
  */
 gulp.task('browserify-watch', ['browserify-vendor'], () =>{
-  var bundler = watchify(browserify('app/main.js', watchify.args));
+  var bundler = watchify(browserify({entries: 'app/main.js', debug: true }, watchify.args));
   bundler.external(dependencies);
   bundler.transform(babelify,{ presets: ["es2015", "react"]});
   bundler.on('update', rebundle);
@@ -93,6 +99,9 @@ gulp.task('browserify-watch', ['browserify-vendor'], () =>{
         gutil.log(gutil.colors.green('Finished rebundling in', (Date.now() - start) + 'ms.'));
       })
       .pipe(source('bundle.js'))
+      .pipe(buffer())
+      .pipe(sourcemaps.init({ loadMasp: true}))
+      .pipe(sourcemaps.write('.'))
       .pipe(gulp.dest('public/js/'));
   }
 });
