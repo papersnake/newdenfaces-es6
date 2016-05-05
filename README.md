@@ -360,3 +360,307 @@ orm.initialize(Config, (err,models) => {
 ```
 
 >注意：**config.js**中的 *migrate* 属性 一开始的时候可以把它设为 **'alter'** 这样可以省了你自己创建数据库的过程，但写入数据以后一定要改为**'safe'** 不然重启服务会清空清数据的。
+
+###原文第十三步，Express API路由
+
+第一个路由是用来创建角色的
+
+```js
+app.post('/api/characters',(req,res,next) => {
+  let gender = req.body.gender;
+  let characterName = req.body.name;
+  let characterIdLookupUrl = 'https://api.eveonline.com/eve/CharacterId.xml.aspx?names=' + characterName;
+
+  const parser = new xml2js.Parser();
+
+  async.waterfall([
+    function(callback) {
+      request.get(characterIdLookupUrl,(err,request,xml) => {
+        if(err) return next(err);
+        parser.parseString(xml,(err,parsedXml) => {
+          try {
+            let characterId = parsedXml.eveapi.result[0].rowset[0].row[0].$.characterID;
+
+            app.models.character.findOne({ characterId: characterId},(err,model) => {
+              if(err) return next(err);
+
+              if(model) {
+                return res.status(400).send({ message: model.name + ' is alread in the database'});
+              }
+
+              callback(err,characterId);
+            });
+          } catch(e) {
+            return res.status(400).send({ message: ' xml Parse Error'});
+          }
+        });
+      });
+    },
+    function(characterId) {
+      let characterInfoUrl = 'https://api.eveonline.com/eve/CharacterInfo.xml.aspx?characterID=' + characterId;
+      console.log(characterInfoUrl);
+      request.get({ url: characterInfoUrl },(err,request,xml) => {
+        if(err) return next(err);
+        parser.parseString(xml, (err,parsedXml) => {
+          if (err) return res.send(err);
+          try{
+            let name = parsedXml.eveapi.result[0].characterName[0];
+            let race = parsedXml.eveapi.result[0].race[0];
+            let bloodline = parsedXml.eveapi.result[0].bloodline[0];
+            app.models.character.create({
+              characterId: characterId,
+              name: name,
+              race: race,
+              bloodline: bloodline,
+              gender: gender
+            },(err,model) => {
+              if(err) return next(err);
+              res.send({ message: characterName + ' has been added successfully!'});
+            });
+          } catch (e) {
+            res.status(404).send({ message: characterName + ' is not a registered citizen of New Eden',error: e.message });
+          }
+        });
+      });
+    }
+  ]);
+});
+```
+是不是看起来和原文的基本一模一样，只不过把var 变成了let 匿名函数变成了ES6的'=>'箭头函数，虽然我用的是**warterline**而原文中用的是**mongoose**但是包括方法名基本都一样，所以我感觉**waterline**是在API上最接近**mongoose**
+>顺便说一下，我为什么不喜欢mongodb,仅仅是因为有一次我安装了，只往里面写了几条测试数据，按文本算最多几kb,但第二天重启机器的时候，系统提示我,我的/home分区空间不足了（双系统分区分给linux分小了本来就不大），结果一查mongodb 的data文件 有2G多，我不知道什么原因，可能是配置不对还是别的什么原因，反正，当天我就把它删除了，
+
+完成了这个API我们就可以往数据库里添加东西了，不知道哪些用户名可以用？相当简单，反正我用的全是一名人的名字（英文名），外国人也喜欢抢注名字，嘿嘿嘿
+
+![add character ui](http://box.kancloud.cn/2015-09-14_55f643eff052d.jpg)
+
+
+###原文第十三步，Home组件
+基本保持和原文一样，只是用**lodash** 替换了 **underscore**
+>一开始我看到网上介绍**lodash**是可以无缝替换**underscore**，中要修改引用就可以，但是我用的版本是*4.11.2*已经有很多方法不一样了，还去掉了不少方法（没有去关注underscore是不是也在最新版本中有同样的改动）
+
+原文中：
+```js
+......
+import {first, without, findWhere} from 'underscore';
+......
+
+var loser = first(without(this.state.characters, findWhere(this.state.characters, { characterId: winner }))).characterId;
+
+......
+
+```
+修改为:
+```js
+......
+import {first, filter} from 'lodash';
+......
+
+let loser = first(filter(this.state.characters,item => item.characterId != winner )).characterId;
+```
+
+>findWhere 在最新版本的lodash中已经不存正，我用了filter来实现相同功能。
+
+###第十四步：Express API 路由（2/2）
+####GET /api/characters
+
+原文的实现方法
+```js
+/**
+ * GET /api/characters
+ * Returns 2 random characters of the same gender that have not been voted yet.
+ */
+app.get('/api/characters', function(req, res, next) {
+  var choices = ['Female', 'Male'];
+  var randomGender = _.sample(choices);
+
+  Character.find({ random: { $near: [Math.random(), 0] } })
+    .where('voted', false)
+    .where('gender', randomGender)
+    .limit(2)
+    .exec(function(err, characters) {
+      if (err) return next(err);
+
+      if (characters.length === 2) {
+        return res.send(characters);
+      }
+
+      var oppositeGender = _.first(_.without(choices, randomGender));
+
+      Character
+        .find({ random: { $near: [Math.random(), 0] } })
+        .where('voted', false)
+        .where('gender', oppositeGender)
+        .limit(2)
+        .exec(function(err, characters) {
+          if (err) return next(err);
+
+          if (characters.length === 2) {
+            return res.send(characters);
+          }
+
+          Character.update({}, { $set: { voted: false } }, { multi: true }, function(err) {
+            if (err) return next(err);
+            res.send([]);
+          });
+        });
+    });
+});
+
+```
+可以看到原文中用***{ random: { $near: [Math.random(), 0] } }***做为查询条件从而在数据库里取出两条随机的记录返回给页面进行PK，前文说过**random**的类型在**mysql**没有类似的，所以我把这个字段删除了。本来**mysql**,可以用***order by rand()*** 之类的方法但是，**waterline**的***sort(order by rand())***不被支持，所以我是把所有符合条件的记录取出来，能过**lodash**的***sampleSize***方法从所有记录中获取两天随机记录。
+
+```js
+app.get('/api/characters', (req,res,next) => {
+  let choice = ['Female', 'Male'];
+  let randomGender = _.sample(choice);
+  //原文中是通过nearby字段来实现随机取值，waterline没有实现mysql order by rand()返回随机记录,所以返回所有结果，用lodash来处理
+  app.models.character.find()
+    .where({'voted': false})
+    .exec((err,characters) => {
+      if(err) return next(err);
+      
+      //用lodash来取两个随机值
+      let randomCharacters = _.sampleSize(_.filter(characters,{'gender': randomGender}),2); 
+      if(randomCharacters.length === 2){
+      //console.log(randomCharacters);
+        return res.send(randomCharacters);
+      }
+
+      //换个性别再试试
+      let oppsiteGender = _.first(_.without(choice, randomGender));
+      let oppsiteCharacters = _.sampleSize(_.filter(characters,{'gender': oppsiteGender}),2); 
+
+      if(oppsiteCharacters === 2) {
+        return res.send(oppsiteCharacters);
+      }
+      //没有符合条件的character，就更新voted字段，开始新一轮PK
+      app.models.character.update({},{'voted': false}).exec((err,characters) => {
+        if(err) return next(err);
+        return res.send([]);
+      });
+      
+
+
+    });
+
+});
+```
+>在数据量大的情况下，这个的方法性能上肯定会有问题，好在我们只是学习过程，数据量也不大。将就用一下，能实现相同的功能就可以了。
+
+
+####GET /api/characters/search
+这个API之前还有两个API，和原文基本一样，所做的修改只是用了ES6的语法，就不浪费篇幅了，可以去我的[github](https://github.com/papersnake/newdenfaces-es6/blob/master/server.js)看
+
+这一个也只是一点**mongoose**和**waterline**的一点点小区别
+原文中mongoose的模糊查找是用正则来做的，mysql好像也可以，但是**warterline**中没有找到相关方法（它的文档太简陋了）
+所以原文中
+
+```js
+app.get('/api/characters/search', function(req, res, next) {
+  var characterName = new RegExp(req.query.name, 'i');
+
+  Character.findOne({ name: characterName }, function(err, character) {
+    ......
+```
+
+我改成了
+
+```js
+app.get('/api/characters/search', (req,res,next) => {
+  app.models.character.findOne({name:{'contains':req.query.name}}, (err,character) => {
+    .....
+```
+通过***contains***来查找，其实就是***like %sometext%***的方法来实现
+下面还有两个方法修改的地方也大同小异，就不仔细讲了，看代码吧
+
+####GET /api/stats
+这个是原文最后一个路由了，
+原文中用了一串的函数来获取各种统计信息，原作者也讲了可以优化，哪我们就把它优化一下吧
+
+```js
+app.get('/api/stats', (req,res,next) => {
+  let asyncTask = [];
+  let countColumn = [
+        {},
+        {race: 'Amarr'},
+        {race: 'Caldari'},
+        {race: 'Gallente'},
+        {race: 'Minmatar'},
+        {gender: 'Male'},
+        {gender: 'Female'}
+      ];
+  countColumn.forEach(column => {
+    asyncTask.push( callback => {
+      app.models.character.count(column,(err,count) => {
+        callback(err,count);
+      });
+    })
+  });
+
+  asyncTask.push(callback =>{
+    app.models.character.find()
+              .sum('wins')
+              .then(results => {
+                callback(null,results[0].wins);
+              });
+  } );
+
+  asyncTask.push(callback => {
+    app.models.character.find()
+              .sort('wins desc')
+              .limit(100)
+              .select('race')
+              .exec((err,characters) => {
+                if(err) return next(err);
+
+                let raceCount = _.countBy(characters,character => character.race);
+                console.log(raceCount);
+                let max = _.max(_.values(raceCount));
+                console.log(max);
+                let inverted = _.invert(raceCount);
+                let topRace = inverted[max];
+                let topCount = raceCount[topRace];
+
+                
+
+                callback(err,{race: topRace, count: topCount});
+              });
+  });
+
+  asyncTask.push(callback => {
+    app.models.character.find()
+              .sort('wins desc')
+              .limit(100)
+              .select('bloodline')
+              .exec((err,characters) => {
+                if(err) return next(err);
+
+                let bloodlineCount = _.countBy(characters,character => character.bloodline);
+                let max = _.max(_.values(bloodlineCount));
+                let inverted = _.invert(bloodlineCount);
+                let topBloodline = inverted[max];
+                let topCount = bloodlineCount[topBloodline];
+
+                callback(err,{bloodline: topBloodline, count: topCount});
+              });
+  });
+
+  async.parallel(asyncTask,(err,results) => {
+    if(err) return next(err);
+    res.send({
+      totalCount: results[0],
+          amarrCount: results[1],
+          caldariCount: results[2],
+          gallenteCount: results[3],
+          minmatarCount: results[4],
+          maleCount: results[5],
+          femaleCount: results[6],
+          totalVotes: results[7],
+          leadingRace: results[8],
+          leadingBloodline:results[9]
+    });
+  }) 
+});
+```
+我把要统计数据的字段放入一个数组***countColumn***通过**forEach**把push到***asyncTask***，最后两个统计方法不一样的函数，单独push,最后用***async.parallel***方法执行并获得结果。
+>underscore的max方法可以从｛a:1,b:6,d:2,e:3｝返回最大值，但是lodash新版中的不行，只能通过_.max(_.values(bloodlineCount))这样的方式返回最大值。
