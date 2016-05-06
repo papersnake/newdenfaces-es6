@@ -47,7 +47,7 @@ class Navbar extends React.Component {
     	if(searchQuery) {
     		NavbarActions.findCharacter({
     			searchQuery: searchQuery,
-    			searchForm: this.refs.searchForm.getDOMNode(),
+    			searchForm: this.refs.searchForm,
     			router: this.context.router
     		});
     	}
@@ -215,8 +215,5 @@ class Navbar extends React.Component {
     }
 }
 
-Navbar.contextTypes = {
-	router: React.PropTypes.func.isRequired
-};
 
 export default Navbar;

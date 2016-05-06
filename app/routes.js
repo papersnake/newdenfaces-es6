@@ -8,14 +8,14 @@ import CharacterList from './components/CharacterList';
 import Stats from './components/Stats';
 
 export default (
-  <Route handler={App}>
-    <Route path='/' handler={Home} />
-    <Route path='/add' handler={AddCharacter} />
-    <Route path='/character/:id' handler={Character} />
-    <Route path='/stats' handler={Stats} />
-    <Route path=':category' handler={CharacterList}>
-    	<Route path=':race' handler={CharacterList}>
-    		<Route path=':bloodline' handler={CharacterList} />
+  <Route component={App}>
+    <Route path='/' component={Home} />
+    <Route path='/add' component={AddCharacter} />
+    <Route path='/character/:id' component={Character} />
+    <Route path='/stats' component={Stats} />
+    <Route path=':category' component={CharacterList}>
+    	<Route path=':race' component={CharacterList}>
+    		<Route path=':bloodline' component={CharacterList} />
     	</Route>
     </Route>
   </Route>

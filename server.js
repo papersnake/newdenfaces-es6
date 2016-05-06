@@ -7,7 +7,8 @@ import bodyParser from 'body-parser';
 import favicon from 'serve-favicon';
 import swig from 'swig';
 import React from 'react';
-import Router from 'react-router';
+import { renderToString } from 'react-dom/server';
+import {match,RouterContext} from 'react-router';
 import Waterline from 'waterline';
 import async from 'async';
 import request from 'request';
@@ -367,10 +368,21 @@ app.post('/api/characters',(req,res,next) => {
 
 
 app.use((req,res) => {
-	Router.run(routes,req.path, (Handler) => {
-		var html = React.renderToString(React.createElement(Handler));
-		var page = swig.renderFile('views/index.html', { html: html});
-		res.send(page);
+	//console.log(routes);
+	match({ routes:routes,location: req.url},(err,redirectLocation,renderProps) => {
+		if(err){
+			res.status(500).send(err.message);
+		} else if (redirectLocation) {
+			res.status(302).redirect(redirectLocation.pathname + redirectLocation.search);
+		} else if(renderProps) {
+			//console.log(renderProps);
+			let reactel= React.createElement(RouterContext,renderProps);
+			let html = renderToString(reactel);
+			let page = swig.renderFile('views/index.html',{html: html});
+			res.status(200).send(page);
+		} else {
+			res.status(404).send('Page Not Found');
+		}
 	});
 });
 

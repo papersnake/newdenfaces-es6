@@ -23,6 +23,7 @@ const production = process.env.NODE_ENV === 'production';
 const dependencies = [
 	'alt',
 	'react',
+  'react-dom',
 	'react-router',
 	'lodash'
 ];
