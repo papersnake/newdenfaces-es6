@@ -10,7 +10,8 @@
   "scripts": {
     "watch": "nodemon --exec babel-node -- server.js",
     "start": "babel-node server.js",
-    "lint": "eslint server.js"
+    "lint": "eslint server.js",
+    "postinstall": "bower install && gulp build"
   },
   "dependencies": {
     "alt": "^0.17.9",
