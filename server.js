@@ -128,12 +128,12 @@ app.post('/api/report', (req,res,next) => {
 
 		if(character.reports > 4){
 			character.remove();
-			return res.send({ message: character.name + ' has been deleted.'});
+			return res.send({ message: `${character.name} has been deleted.`});
 		}
 
 		character.save(err => {
 			if(err) return next(err);
-			res.send({ message: character.name + ' has been reported.'})
+			res.send({ message: `${character.name} has been reported.`})
 		});
 
 	});
@@ -306,7 +306,9 @@ app.get('/api/characters', (req,res,next) => {
 app.post('/api/characters',(req,res,next) => {
 	let gender = req.body.gender;
 	let characterName = req.body.name;
-	let characterIdLookupUrl = 'https://api.eveonline.com/eve/CharacterId.xml.aspx?names=' + characterName;
+	//let characterIdLookupUrl = 'https://api.eveonline.com/eve/CharacterId.xml.aspx?names=' + characterName;
+	let characterIdLookupUrl = `https://api.eveonline.com/eve/CharacterId.xml.aspx?names=${characterName}`;
+
 
 	const parser = new xml2js.Parser();
 
@@ -322,7 +324,7 @@ app.post('/api/characters',(req,res,next) => {
 							if(err) return next(err);
 
 							if(model) {
-								return res.status(400).send({ message: model.name + ' is alread in the database'});
+								return res.status(400).send({ message: `${model.name} is alread in the database.`});
 							}
 
 							callback(err,characterId);
@@ -334,7 +336,7 @@ app.post('/api/characters',(req,res,next) => {
 			});
 		},
 		function(characterId) {
-			let characterInfoUrl = 'https://api.eveonline.com/eve/CharacterInfo.xml.aspx?characterID=' + characterId;
+			let characterInfoUrl = `https://api.eveonline.com/eve/CharacterInfo.xml.aspx?characterID=${characterId}`;
 			console.log(characterInfoUrl);
 			request.get({ url: characterInfoUrl },(err,request,xml) => {
 				if(err) return next(err);
@@ -352,10 +354,10 @@ app.post('/api/characters',(req,res,next) => {
 							gender: gender
 						},(err,model) => {
 							if(err) return next(err);
-							res.send({ message: characterName + ' has been added successfully!'});
+							res.send({ message: `${characterName} has been added successfully!`});
 						});
 					} catch (e) {
-						res.status(404).send({ message: characterName + ' is not a registered citizen of New Eden',error: e.message });
+						res.status(404).send({ message: `${characterName} is not a registered citizen of New Eden`});
 					}
 				});
 			});
