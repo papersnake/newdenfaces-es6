@@ -320,7 +320,7 @@ app.post('/api/characters',(req,res,next) => {
 	let characterName = req.body.name;
 	//let characterIdLookupUrl = 'https://api.eveonline.com/eve/CharacterId.xml.aspx?names=' + characterName;
 	let characterIdLookupUrl = `https://api.eveonline.com/eve/CharacterId.xml.aspx?names=${characterName}`;
-
+	console.log(characterIdLookupUrl);
 
 	const parser = new xml2js.Parser();
 
